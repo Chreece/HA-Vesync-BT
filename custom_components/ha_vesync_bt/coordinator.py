@@ -223,8 +223,13 @@ class HaVesyncCoordinator(DataUpdateCoordinator[ScaleState]):
     @callback
     def _handle_device_state(self, state: ScaleState) -> None:
         now = monotonic()
+        selected_food_changed = state.selected_food != self.data.selected_food
         self.data = state
-        if not state.connected or now - self._last_publish >= STATE_THROTTLE_SECONDS:
+        if (
+            selected_food_changed
+            or not state.connected
+            or now - self._last_publish >= STATE_THROTTLE_SECONDS
+        ):
             self._last_publish = now
             self.async_set_updated_data(state)
 
