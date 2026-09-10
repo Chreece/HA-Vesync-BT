@@ -1,6 +1,12 @@
 {
   "domain": "ha_vesync_bt",
   "name": "HA-VeSync-BT",
+  "bluetooth": [
+    {
+      "connectable": true,
+      "local_name": "COSORI Nutrition Scale"
+    }
+  ],
   "codeowners": [
     "@Chreece"
   ],
@@ -16,11 +22,5 @@
     "bleak-retry-connector==4.7.0",
     "cryptography==48.0.1"
   ],
-  "version": "0.1.0",
-  "bluetooth": [
-    {
-      "connectable": true,
-      "local_name": "COSORI Nutrition Scale"
-    }
-  ]
+  "version": "0.1.0"
 }
