@@ -30,7 +30,7 @@
 | Selected food `0x4445` | Proven live | Implemented sensor/state |
 | Offline 200-record history | Advertised by manual; official VeSync first reconnect after a controlled offline selected-food measurement returned an empty `0x4446` response on the tested CNS-R002S-S | **Disabled** |
 | History delete/ack | `0x444B` semantics known, but no real stored record was produced by the tested unit/firmware | **Disabled** |
-| OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal pure codec only; **not exposed** |
+| OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal codec + updater + explicit VSV3 response-frame support; **not exposed** |
 | Factory reset | Command known, destructive | **Disabled** |
 | Hold | CNS-R002S-S disables capability | Not exposed |
 | Region query | CNS-R002S-S disables capability | Not exposed |
