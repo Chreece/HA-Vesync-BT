@@ -26,6 +26,9 @@ OTA_K1 = 1
 
 PLUGIN_FIELD_LENGTH = 9
 INITIAL_PAYLOAD_LENGTH = 20
+JAVA_BYTE_MIN = -0x80
+JAVA_BYTE_MAX = 0x7F
+MAX_JAVA_INT_FILE_SIZE = 0x7FFFFFFF
 
 
 class OtaV3UpdatePermission(IntEnum):
@@ -123,7 +126,9 @@ def build_initial_payload(
 
     version_parts = firmware_version.split(".")
     if len(version_parts) != 3:
-        raise ValueError("firmware_version must contain exactly three numeric parts")
+        raise ValueError(
+            "firmware_version must contain exactly three numeric parts"
+        )
 
     try:
         major, minor, patch = (int(part, 10) for part in version_parts)
@@ -132,22 +137,29 @@ def build_initial_payload(
             "firmware_version must contain exactly three numeric parts"
         ) from err
 
-    if any(part < 0 or part > 0xFF for part in (major, minor, patch)):
-        raise ValueError("firmware version components must fit one byte")
-    if file_size < 0 or file_size > 0xFFFFFFFF:
-        raise ValueError("file_size must fit uint32")
+    # VeSync uses java.lang.Byte.parseByte() for each component.
+    if any(
+        part < JAVA_BYTE_MIN or part > JAVA_BYTE_MAX
+        for part in (major, minor, patch)
+    ):
+        raise ValueError(
+            "firmware version components must fit java.lang.Byte"
+        )
+
+    # The source obtains this from FileInputStream.available(), which is int.
+    if file_size < 0 or file_size > MAX_JAVA_INT_FILE_SIZE:
+        raise ValueError("file_size must fit a non-negative Java int")
 
     payload = bytearray(INITIAL_PAYLOAD_LENGTH)
     payload[: len(plugin)] = plugin
 
-    # VeSync source writes these two fixed bytes verbatim.
     payload[9] = 0
     payload[10] = 2
 
     # Version is encoded patch, minor, major.
-    payload[11] = patch
-    payload[12] = minor
-    payload[13] = major
+    payload[11] = patch & 0xFF
+    payload[12] = minor & 0xFF
+    payload[13] = major & 0xFF
     payload[14:18] = file_size.to_bytes(4, "little")
 
     # Source uses 0 for the last update component and 1 otherwise.
@@ -294,7 +306,9 @@ def build_load_ack(*, sequence: int, incoming_key_type: int) -> OtaV3Command:
         command=CMD_OTA_LOAD_RESULT,
         sequence=sequence,
         payload=b"",
-        key_type=_reply_key_type(CMD_OTA_LOAD_RESULT, incoming_key_type),
+        key_type=_reply_key_type(
+            CMD_OTA_LOAD_RESULT, incoming_key_type
+        ),
         flags=OTA_REPLY_FLAGS,
     )
 
@@ -307,7 +321,9 @@ def build_final_ack(*, sequence: int, incoming_key_type: int) -> OtaV3Command:
         command=CMD_OTA_UPDATE_RESULT,
         sequence=sequence,
         payload=b"",
-        key_type=_reply_key_type(CMD_OTA_UPDATE_RESULT, incoming_key_type),
+        key_type=_reply_key_type(
+            CMD_OTA_UPDATE_RESULT, incoming_key_type
+        ),
         flags=OTA_REPLY_FLAGS,
     )
 
