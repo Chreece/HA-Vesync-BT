@@ -27,8 +27,8 @@
 | Quick Food reorder/delete semantics | Proven live | Implemented |
 | Quick Food nutrition | Proven exact roundtrip | Implemented |
 | Food context `0x4444` | Proven | Implemented action |
-| Selected food `0x4445` | Proven live | Implemented sensor/state |
-| Offline 200-record history | Advertised by manual; official VeSync first reconnect after a controlled offline selected-food measurement returned an empty `0x4446` response on the tested CNS-R002S-S | **Disabled** |
+| Selected food `0x4445` | Proven live for five physical Quick Foods, including UTF-8 `Hühnchenbrust`; captured vectors parse correctly | Implemented sensor/state; discrete selected-food changes publish immediately |
+| Offline 200-record history | Advertised by manual; official VeSync first reconnect after a controlled offline selected-food measurement returned an empty `0x4446` response. Static R002 analysis proves `CnsR002sUSDeviceProvider` only overrides home-navigation buttons and inherits the R001 history/save implementation unchanged | **Disabled** pending lifecycle/device-side prerequisite proof |
 | History delete/ack | `0x444B` semantics known, but no real stored record was produced by the tested unit/firmware | **Disabled** |
 | OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal codec + updater + explicit VSV3 response-frame support; **not exposed** |
 | Factory reset | Command known, destructive | **Disabled** |
