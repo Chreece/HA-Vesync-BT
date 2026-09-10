@@ -1,5 +1,8 @@
 # HA-VeSync-BT
 
+💙 **Enjoying this hobby project? [Send a voluntary thank-you via PayPal](https://www.paypal.me/ChristosBaltatzidis).**
+
+
 Local Home Assistant integration for VeSync BLE devices.
 
 > **Status:** experimental / reverse-engineering based.  
@@ -215,3 +218,11 @@ See:
 - [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md)
 
 This project is unofficial and is not affiliated with VeSync or COSORI.
+
+## ❤️ Voluntary support
+
+This is a private hobby project maintained in my free time and provided independently of contributions.
+
+If you enjoy the project and would like to send me a voluntary personal thank-you, you can use **[PayPal](https://www.paypal.me/ChristosBaltatzidis)**.
+
+Contributions are completely optional and do **not** buy or guarantee features, support, development work, early access, priority, or any other service. This is not a charitable donation and no donation receipt is issued.
