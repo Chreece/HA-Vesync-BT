@@ -36,11 +36,21 @@ def test_ota_v3_initial_payload_vector() -> None:
 def test_ota_v3_initial_payload_non_last_component() -> None:
     payload = ota.build_initial_payload(
         plugin_name="abcdefghi",
-        firmware_version="255.0.1",
+        firmware_version="127.0.1",
         file_size=1,
         last_component=False,
     )
-    assert payload.hex() == "61626364656667686900020100ff0100000001ff"
+    assert payload.hex() == "616263646566676869000201007f0100000001ff"
+
+
+def test_ota_v3_signed_java_byte_version_vector() -> None:
+    payload = ota.build_initial_payload(
+        plugin_name="scale",
+        firmware_version="-1.2.3",
+        file_size=1,
+        last_component=True,
+    )
+    assert payload[13] == 0xFF
 
 
 def test_ota_v3_data_payload_full_and_short_chunks() -> None:
@@ -143,17 +153,33 @@ def test_ota_v3_empty_ack_physical_frame_vectors() -> None:
 
 
 def test_ota_v3_validation() -> None:
-    try:
-        ota.build_initial_payload(
-            plugin_name="0123456789",
-            firmware_version="1.2.3",
-            file_size=1,
-            last_component=True,
-        )
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("long plugin name must fail")
+    invalid_initial_values = (
+        {
+            "plugin_name": "0123456789",
+            "firmware_version": "1.2.3",
+            "file_size": 1,
+            "last_component": True,
+        },
+        {
+            "plugin_name": "scale",
+            "firmware_version": "128.2.3",
+            "file_size": 1,
+            "last_component": True,
+        },
+        {
+            "plugin_name": "scale",
+            "firmware_version": "1.2.3",
+            "file_size": 0x80000000,
+            "last_component": True,
+        },
+    )
+    for values in invalid_initial_values:
+        try:
+            ota.build_initial_payload(**values)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"expected validation failure for {values}")
 
     try:
         ota.build_data_payload(b"abc", offset=4, max_chunk_size=1)
