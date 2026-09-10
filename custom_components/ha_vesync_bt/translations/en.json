@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select a VeSync BLE device",
+        "description": "Wake the scale and select it from the discovered devices.",
+        "data": {"address": "Device"}
+      },
+      "bluetooth_confirm": {
+        "title": "Add {name}",
+        "description": "Add this locally discovered VeSync BLE device?"
+      }
+    },
+    "abort": {
+      "no_devices_found": "No supported VeSync BLE devices were found. Wake the scale and try again.",
+      "not_supported": "This VeSync BLE device is not supported.",
+      "already_configured": "This device is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "measurement": {"name": "Measurement"},
+      "battery": {"name": "Battery"},
+      "quick_food_count": {"name": "Quick Foods"},
+      "selected_food": {"name": "Selected food"},
+      "enabled_units": {"name": "Enabled units"},
+      "firmware": {"name": "Firmware"}
+    },
+    "binary_sensor": {
+      "connected": {"name": "Connected"},
+      "stable": {"name": "Stable"},
+      "tare": {"name": "Tare"},
+      "object_present": {"name": "Object present"},
+      "low_battery": {"name": "Low battery"},
+      "overload": {"name": "Overload"},
+      "charging": {"name": "Charging"}
+    },
+    "select": {
+      "unit": {"name": "Unit"},
+      "language": {"name": "Language"},
+      "brightness": {"name": "Brightness"},
+      "standby_timeout": {"name": "Standby timeout"}
+    },
+    "button": {
+      "tare_button": {"name": "Tare"},
+      "sync_time": {"name": "Sync clock"},
+      "refresh": {"name": "Refresh"}
+    },
+    "event": {"physical_controls": {"name": "Physical controls"}}
+  }
+}

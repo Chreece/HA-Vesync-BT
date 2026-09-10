@@ -1,0 +1,26 @@
+{
+  "domain": "ha_vesync_bt",
+  "name": "HA-VeSync-BT",
+  "codeowners": [
+    "@Chreece"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "bluetooth_adapters"
+  ],
+  "documentation": "https://github.com/Chreece/HA-Vesync-BT",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Chreece/HA-Vesync-BT/issues",
+  "requirements": [
+    "bleak-retry-connector==4.7.0",
+    "cryptography==48.0.1"
+  ],
+  "version": "0.1.0",
+  "bluetooth": [
+    {
+      "connectable": true,
+      "local_name": "COSORI Nutrition Scale"
+    }
+  ]
+}

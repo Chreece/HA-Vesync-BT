@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "VeSync-BLE-Gerät auswählen",
+        "description": "Wecke die Waage auf und wähle sie aus den gefundenen Geräten aus.",
+        "data": {"address": "Gerät"}
+      },
+      "bluetooth_confirm": {
+        "title": "{name} hinzufügen",
+        "description": "Dieses lokal gefundene VeSync-BLE-Gerät hinzufügen?"
+      }
+    },
+    "abort": {
+      "no_devices_found": "Keine unterstützten VeSync-BLE-Geräte gefunden. Wecke die Waage auf und versuche es erneut.",
+      "not_supported": "Dieses VeSync-BLE-Gerät wird nicht unterstützt.",
+      "already_configured": "Dieses Gerät ist bereits konfiguriert."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "measurement": {"name": "Messwert"},
+      "battery": {"name": "Akku"},
+      "quick_food_count": {"name": "Quick Foods"},
+      "selected_food": {"name": "Ausgewähltes Lebensmittel"},
+      "enabled_units": {"name": "Aktivierte Einheiten"},
+      "firmware": {"name": "Firmware"}
+    },
+    "binary_sensor": {
+      "connected": {"name": "Verbunden"},
+      "stable": {"name": "Stabil"},
+      "tare": {"name": "Tara"},
+      "object_present": {"name": "Objekt vorhanden"},
+      "low_battery": {"name": "Niedriger Akkustand"},
+      "overload": {"name": "Überlast"},
+      "charging": {"name": "Wird geladen"}
+    },
+    "select": {
+      "unit": {"name": "Einheit"},
+      "language": {"name": "Sprache"},
+      "brightness": {"name": "Helligkeit"},
+      "standby_timeout": {"name": "Standby-Zeit"}
+    },
+    "button": {
+      "tare_button": {"name": "Tarieren"},
+      "sync_time": {"name": "Uhr synchronisieren"},
+      "refresh": {"name": "Aktualisieren"}
+    },
+    "event": {"physical_controls": {"name": "Physische Bedienelemente"}}
+  }
+}

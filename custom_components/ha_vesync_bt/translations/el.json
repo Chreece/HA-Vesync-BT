@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Επιλογή συσκευής VeSync BLE",
+        "description": "Ξύπνησε τη ζυγαριά και επίλεξέ την από τις συσκευές που εντοπίστηκαν.",
+        "data": {"address": "Συσκευή"}
+      },
+      "bluetooth_confirm": {
+        "title": "Προσθήκη {name}",
+        "description": "Να προστεθεί αυτή η τοπικά εντοπισμένη συσκευή VeSync BLE;"
+      }
+    },
+    "abort": {
+      "no_devices_found": "Δεν βρέθηκαν υποστηριζόμενες συσκευές VeSync BLE. Ξύπνησε τη ζυγαριά και δοκίμασε ξανά.",
+      "not_supported": "Αυτή η συσκευή VeSync BLE δεν υποστηρίζεται.",
+      "already_configured": "Αυτή η συσκευή έχει ήδη ρυθμιστεί."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "measurement": {"name": "Μέτρηση"},
+      "battery": {"name": "Μπαταρία"},
+      "quick_food_count": {"name": "Quick Foods"},
+      "selected_food": {"name": "Επιλεγμένο τρόφιμο"},
+      "enabled_units": {"name": "Ενεργές μονάδες"},
+      "firmware": {"name": "Υλικολογισμικό"}
+    },
+    "binary_sensor": {
+      "connected": {"name": "Συνδεδεμένη"},
+      "stable": {"name": "Σταθερή μέτρηση"},
+      "tare": {"name": "Απόβαρο"},
+      "object_present": {"name": "Υπάρχει αντικείμενο"},
+      "low_battery": {"name": "Χαμηλή μπαταρία"},
+      "overload": {"name": "Υπερφόρτωση"},
+      "charging": {"name": "Φόρτιση"}
+    },
+    "select": {
+      "unit": {"name": "Μονάδα"},
+      "language": {"name": "Γλώσσα"},
+      "brightness": {"name": "Φωτεινότητα"},
+      "standby_timeout": {"name": "Χρόνος αναμονής"}
+    },
+    "button": {
+      "tare_button": {"name": "Απόβαρο"},
+      "sync_time": {"name": "Συγχρονισμός ρολογιού"},
+      "refresh": {"name": "Ανανέωση"}
+    },
+    "event": {"physical_controls": {"name": "Φυσικά πλήκτρα"}}
+  }
+}

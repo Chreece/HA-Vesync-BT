@@ -1,0 +1,256 @@
+add_quick_food:
+  name: Add Quick Food
+  description: Add one imported food to the physical scale.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ha_vesync_bt
+    name:
+      name: Food name
+      required: true
+      selector:
+        text:
+    daily_food_weight_g:
+      name: Reference weight
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 5000
+          step: 0.1
+          unit_of_measurement: g
+          mode: box
+    calories_kcal:
+      name: Calories
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    protein_g:
+      name: Protein
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    total_fat_g:
+      name: Total fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    saturated_fat_g:
+      name: Saturated fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    trans_fat_g:
+      name: Trans fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    total_carbs_g:
+      name: Total carbohydrates
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    dietary_fiber_g:
+      name: Dietary fiber
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    sugars_g:
+      name: Sugars
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    cholesterol_mg:
+      name: Cholesterol
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    sodium_mg:
+      name: Sodium
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    iron_mg:
+      name: Iron
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+
+remove_quick_food:
+  name: Remove Quick Food
+  description: Remove one imported Quick Food by its current sequence number.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ha_vesync_bt
+    sequence:
+      name: Sequence
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 255
+          mode: box
+
+reorder_quick_foods:
+  name: Reorder Quick Foods
+  description: Send the complete ordered list of current Quick Food sequence numbers.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ha_vesync_bt
+    sequences:
+      name: Sequences
+      required: true
+      description: "Example: [3, 1, 2]"
+      selector:
+        object:
+
+set_enabled_units:
+  name: Set enabled units
+  description: Choose which unit modes can be selected on the physical scale.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ha_vesync_bt
+    units:
+      name: Units
+      required: true
+      selector:
+        select:
+          multiple: true
+          options:
+            - oz
+            - "lb:oz"
+            - fl oz water
+            - fl oz milk
+            - g
+            - mL water
+            - mL milk
+
+set_food_context:
+  name: Set food context
+  description: Send the app-side current food context (0x4444). This does not import a Quick Food.
+  fields:
+    device_id:
+      name: Device
+      required: true
+      selector:
+        device:
+          integration: ha_vesync_bt
+    name:
+      name: Food name
+      required: true
+      selector:
+        text:
+    calories_kcal:
+      name: Calories
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    protein_g:
+      name: Protein
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    total_fat_g:
+      name: Total fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    saturated_fat_g:
+      name: Saturated fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    trans_fat_g:
+      name: Trans fat
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    total_carbs_g:
+      name: Total carbohydrates
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    dietary_fiber_g:
+      name: Dietary fiber
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    sugars_g:
+      name: Sugars
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    cholesterol_mg:
+      name: Cholesterol
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    sodium_mg:
+      name: Sodium
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
+    iron_mg:
+      name: Iron
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          mode: box
