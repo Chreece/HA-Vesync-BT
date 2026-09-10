@@ -23,7 +23,15 @@ from .exceptions import (
     VeSyncProtocolResponseError,
     VeSyncProtocolTimeout,
 )
-from .frame import build_frame, checksum_ok, decode_frame, pop_frames
+from .frame import (
+    DEFAULT_COMMAND_VERSION,
+    DEFAULT_FLAGS,
+    VSV3Frame,
+    build_frame,
+    checksum_ok,
+    decode_frame,
+    pop_frames,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +42,8 @@ EXTRA_UUID = "0000fff3-0000-1000-8000-00805f9b34fb"
 
 CMD_KEY_NEGOTIATION = 0x4201
 CMD_BIND = 0x4202
+
+FrameListener = Callable[[VSV3Frame, bytes], None]
 
 
 class VSV3Transport:
@@ -54,6 +64,7 @@ class VSV3Transport:
         self._rx_buffer = bytearray()
         self._pending: dict[tuple[int, int], asyncio.Future[bytes]] = {}
         self._command_lock = asyncio.Lock()
+        self._frame_listeners: set[FrameListener] = set()
 
         self._k1: bytes | None = None
         self._session_iv: bytes | None = None
@@ -65,6 +76,14 @@ class VSV3Transport:
     def connected(self) -> bool:
         """Return whether BLE is currently connected."""
         return bool(self._client and self._client.is_connected)
+
+    def add_frame_listener(self, callback: FrameListener) -> None:
+        """Receive decoded VSV3 metadata plus decrypted payload for each frame."""
+        self._frame_listeners.add(callback)
+
+    def remove_frame_listener(self, callback: FrameListener) -> None:
+        """Remove a previously registered decoded-frame listener."""
+        self._frame_listeners.discard(callback)
 
     async def connect(self, ble_device: BLEDevice, name: str) -> None:
         """Connect, subscribe, and establish a fresh VSV3 session."""
@@ -90,13 +109,18 @@ class VSV3Transport:
             try:
                 await acquire_mtu()
             except Exception:  # noqa: BLE001
-                _LOGGER.debug("Could not explicitly acquire BLE MTU", exc_info=True)
+                _LOGGER.debug(
+                    "Could not explicitly acquire BLE MTU",
+                    exc_info=True,
+                )
 
         notify_char = client.services.get_characteristic(NOTIFY_UUID)
         write_char = client.services.get_characteristic(WRITE_UUID)
         if notify_char is None or write_char is None:
             await client.disconnect()
-            raise VeSyncConnectionError("Expected VSV3 FFF1/FFF2 characteristics not found")
+            raise VeSyncConnectionError(
+                "Expected VSV3 FFF1/FFF2 characteristics not found"
+            )
 
         self._write_char = write_char
         self._rx_buffer.clear()
@@ -106,7 +130,10 @@ class VSV3Transport:
         self._session_iv = None
 
         try:
-            await client.start_notify(notify_char, self._notification_handler)
+            await client.start_notify(
+                notify_char,
+                self._notification_handler,
+            )
             await self._handshake()
         except Exception:
             await client.disconnect()
@@ -129,7 +156,10 @@ class VSV3Transport:
             try:
                 await client.disconnect()
             except Exception:  # noqa: BLE001
-                _LOGGER.debug("BLE disconnect failed", exc_info=True)
+                _LOGGER.debug(
+                    "BLE disconnect failed",
+                    exc_info=True,
+                )
 
     async def request(
         self,
@@ -139,29 +169,43 @@ class VSV3Transport:
         key_type: int = 1,
         timeout: float = 6.0,
         response_optional: bool = False,
+        sequence: int | None = None,
+        flags: int = DEFAULT_FLAGS,
+        command_version: int = DEFAULT_COMMAND_VERSION,
+        sub_index: int = 0,
     ) -> bytes:
         """Send a serialized VSV3 request."""
         if not self.connected or self._write_char is None:
             raise VeSyncNotConnectedError("The scale is not connected")
 
         async with self._command_lock:
-            sequence = self._next_sequence()
-            encrypted = self._encrypt_payload(command, payload, key_type)
-            frame = build_frame(
+            actual_sequence = (
+                self._next_sequence()
+                if sequence is None
+                else self._validate_byte("sequence", sequence)
+            )
+            frame = self._build_outbound_frame(
                 command=command,
-                sequence=sequence,
-                payload=encrypted,
+                sequence=actual_sequence,
+                payload=payload,
                 key_type=key_type,
+                flags=flags,
+                command_version=command_version,
+                sub_index=sub_index,
             )
 
             loop = asyncio.get_running_loop()
             future: asyncio.Future[bytes] = loop.create_future()
-            self._pending[(command, sequence)] = future
+            key = (command, actual_sequence)
+            self._pending[key] = future
 
             try:
                 await self._write_frame(frame)
                 try:
-                    return await asyncio.wait_for(future, timeout=timeout)
+                    return await asyncio.wait_for(
+                        future,
+                        timeout=timeout,
+                    )
                 except TimeoutError as err:
                     if response_optional:
                         return b""
@@ -169,7 +213,69 @@ class VSV3Transport:
                         f"Timed out waiting for 0x{command:04X}"
                     ) from err
             finally:
-                self._pending.pop((command, sequence), None)
+                self._pending.pop(key, None)
+
+    async def send_frame(
+        self,
+        command: int,
+        payload: bytes = b"",
+        *,
+        key_type: int = 1,
+        sequence: int,
+        flags: int,
+        command_version: int = DEFAULT_COMMAND_VERSION,
+        sub_index: int = 0,
+    ) -> None:
+        """Send one explicit VSV3 frame without awaiting a response."""
+        if not self.connected or self._write_char is None:
+            raise VeSyncNotConnectedError("The scale is not connected")
+
+        async with self._command_lock:
+            frame = self._build_outbound_frame(
+                command=command,
+                sequence=self._validate_byte("sequence", sequence),
+                payload=payload,
+                key_type=key_type,
+                flags=flags,
+                command_version=command_version,
+                sub_index=sub_index,
+            )
+            await self._write_frame(frame)
+
+    def _build_outbound_frame(
+        self,
+        *,
+        command: int,
+        sequence: int,
+        payload: bytes,
+        key_type: int,
+        flags: int,
+        command_version: int,
+        sub_index: int,
+    ) -> bytes:
+        encrypted = self._encrypt_payload(
+            command,
+            payload,
+            key_type,
+        )
+        return build_frame(
+            command=command,
+            sequence=sequence,
+            payload=encrypted,
+            key_type=key_type,
+            flags=self._validate_byte("flags", flags),
+            command_version=self._validate_byte(
+                "command_version",
+                command_version,
+            ),
+            sub_index=self._validate_byte("sub_index", sub_index),
+        )
+
+    @staticmethod
+    def _validate_byte(name: str, value: int) -> int:
+        if not 0 <= value <= 0xFF:
+            raise ValueError(f"{name} must fit one byte")
+        return value
 
     def _next_sequence(self) -> int:
         sequence = self._sequence & 0xFF
@@ -182,13 +288,17 @@ class VSV3Transport:
 
         sizes: list[int] = []
         try:
-            value = int(self._write_char.max_write_without_response_size)
+            value = int(
+                self._write_char.max_write_without_response_size
+            )
             if value > 0:
                 sizes.append(value)
         except Exception:  # noqa: BLE001
             pass
 
-        mtu = int(getattr(self._client, "mtu_size", 0) or 0)
+        mtu = int(
+            getattr(self._client, "mtu_size", 0) or 0
+        )
         if mtu >= 23:
             sizes.append(mtu - 3)
 
@@ -200,7 +310,8 @@ class VSV3Transport:
         chunk_size = min(sizes)
         if chunk_size < 20:
             raise VeSyncConnectionError(
-                f"Invalid BLE write-without-response size: {chunk_size}"
+                "Invalid BLE write-without-response size: "
+                f"{chunk_size}"
             )
 
         try:
@@ -214,18 +325,27 @@ class VSV3Transport:
         except Exception as err:
             raise VeSyncConnectionError(str(err)) from err
 
-    def _notification_handler(self, _sender: Any, data: bytearray) -> None:
+    def _notification_handler(
+        self,
+        _sender: Any,
+        data: bytearray,
+    ) -> None:
         self._rx_buffer.extend(bytes(data))
         for raw in pop_frames(self._rx_buffer):
             try:
                 self._handle_frame(raw)
             except Exception:  # noqa: BLE001
-                _LOGGER.debug("Unable to process VSV3 frame", exc_info=True)
+                _LOGGER.debug(
+                    "Unable to process VSV3 frame",
+                    exc_info=True,
+                )
 
     def _handle_frame(self, raw: bytes) -> None:
         decoded = decode_frame(raw)
         if not checksum_ok(raw):
-            raise VeSyncProtocolResponseError("Invalid VSV3 checksum")
+            raise VeSyncProtocolResponseError(
+                "Invalid VSV3 checksum"
+            )
 
         payload = self._decrypt_payload(
             decoded.command,
@@ -234,27 +354,62 @@ class VSV3Transport:
             inbound=True,
         )
 
+        for callback in tuple(self._frame_listeners):
+            try:
+                callback(decoded, payload)
+            except Exception:  # noqa: BLE001
+                _LOGGER.debug(
+                    "VSV3 frame listener failed",
+                    exc_info=True,
+                )
+
         key = (decoded.command, decoded.sequence)
         pending = self._pending.get(key)
-        if decoded.is_response and pending and not pending.done():
+        if (
+            decoded.is_response
+            and pending
+            and not pending.done()
+        ):
             pending.set_result(payload)
             return
 
         if self._unsolicited_callback is not None:
-            self._unsolicited_callback(decoded.command, payload)
+            self._unsolicited_callback(
+                decoded.command,
+                payload,
+            )
 
-    def _encrypt_payload(self, command: int, payload: bytes, key_type: int) -> bytes:
+    def _encrypt_payload(
+        self,
+        command: int,
+        payload: bytes,
+        key_type: int,
+    ) -> bytes:
         if key_type == 0 or not payload:
             return payload
         if key_type != 1:
-            raise VeSyncProtocolResponseError(f"Unsupported outbound key type K{key_type}")
+            raise VeSyncProtocolResponseError(
+                f"Unsupported outbound key type K{key_type}"
+            )
         if self._k1 is None:
-            raise VeSyncProtocolResponseError("VSV3 K1 is not established")
+            raise VeSyncProtocolResponseError(
+                "VSV3 K1 is not established"
+            )
 
-        iv = bytes(16) if command == CMD_BIND else self._session_iv
+        iv = (
+            bytes(16)
+            if command == CMD_BIND
+            else self._session_iv
+        )
         if iv is None:
-            raise VeSyncProtocolResponseError("VSV3 session IV is not established")
-        return aes_encrypt(self._k1, iv, payload)
+            raise VeSyncProtocolResponseError(
+                "VSV3 session IV is not established"
+            )
+        return aes_encrypt(
+            self._k1,
+            iv,
+            payload,
+        )
 
     def _decrypt_payload(
         self,
@@ -267,14 +422,24 @@ class VSV3Transport:
         if key_type == 0 or not payload:
             return payload
         if key_type != 1:
-            raise VeSyncProtocolResponseError(f"Unsupported inbound key type K{key_type}")
+            raise VeSyncProtocolResponseError(
+                f"Unsupported inbound key type K{key_type}"
+            )
         if self._k1 is None:
-            raise VeSyncProtocolResponseError("VSV3 K1 is not established")
+            raise VeSyncProtocolResponseError(
+                "VSV3 K1 is not established"
+            )
 
         iv = self._session_iv
         if iv is None:
-            raise VeSyncProtocolResponseError("VSV3 session IV is not established")
-        return aes_decrypt(self._k1, iv, payload)
+            raise VeSyncProtocolResponseError(
+                "VSV3 session IV is not established"
+            )
+        return aes_decrypt(
+            self._k1,
+            iv,
+            payload,
+        )
 
     async def _handshake(self) -> None:
         rng = secrets.SystemRandom()
@@ -311,18 +476,33 @@ class VSV3Transport:
 
         mac_length = response[1]
         if len(response) < 2 + mac_length + 2:
-            raise VeSyncProtocolResponseError("Malformed VSV3 0x4201 response")
+            raise VeSyncProtocolResponseError(
+                "Malformed VSV3 0x4201 response"
+            )
 
-        response_mac = response[2 : 2 + mac_length]
+        response_mac = response[
+            2 : 2 + mac_length
+        ]
         if response_mac != mac_reversed:
-            raise VeSyncProtocolResponseError("VSV3 0x4201 MAC mismatch")
+            raise VeSyncProtocolResponseError(
+                "VSV3 0x4201 MAC mismatch"
+            )
 
         device_public = int.from_bytes(
-            response[2 + mac_length : 4 + mac_length],
+            response[
+                2 + mac_length : 4 + mac_length
+            ],
             "little",
         )
-        shared = pow(device_public, private, prime)
-        self._k1 = derive_k1(shared, mac_reversed)
+        shared = pow(
+            device_public,
+            private,
+            prime,
+        )
+        self._k1 = derive_k1(
+            shared,
+            mac_reversed,
+        )
 
         self._session_iv = os.urandom(16)
         bind_payload = (
@@ -338,16 +518,24 @@ class VSV3Transport:
             key_type=1,
             timeout=8,
         )
-        if not bind_response or bind_response[0] != 0:
+        if (
+            not bind_response
+            or bind_response[0] != 0
+        ):
             raise VeSyncProtocolResponseError(
-                f"VSV3 0x4202 bind failed: {bind_response.hex()}"
+                f"VSV3 0x4202 bind failed: "
+                f"{bind_response.hex()}"
             )
 
     def _reversed_mac_bytes(self) -> bytes:
-        clean = self.address.replace(":", "").replace("-", "")
+        clean = (
+            self.address.replace(":", "")
+            .replace("-", "")
+        )
         if len(clean) != 12:
             raise VeSyncProtocolResponseError(
-                f"Unexpected Bluetooth address format: {self.address}"
+                "Unexpected Bluetooth address format: "
+                f"{self.address}"
             )
         return bytes.fromhex(clean)[::-1]
 
@@ -357,11 +545,20 @@ class VSV3Transport:
             time.tzset()
         except AttributeError:
             pass
-        raw_offset_seconds_east = -int(time.timezone)
-        raw_offset_ms = raw_offset_seconds_east * 1000
-        return int((raw_offset_ms * 2) / 3600) & 0xFF
+        raw_offset_seconds_east = -int(
+            time.timezone
+        )
+        raw_offset_ms = (
+            raw_offset_seconds_east * 1000
+        )
+        return int(
+            (raw_offset_ms * 2) / 3600
+        ) & 0xFF
 
-    def _handle_disconnect(self, _client: BleakClientWithServiceCache) -> None:
+    def _handle_disconnect(
+        self,
+        _client: BleakClientWithServiceCache,
+    ) -> None:
         self._client = None
         self._write_char = None
         self._k1 = None
