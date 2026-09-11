@@ -1,9 +1,9 @@
-"""Constants for HA-VeSync-BT."""
+"""Constants for VeSync Local BT."""
 
 from __future__ import annotations
 
 DOMAIN = "ha_vesync_bt"
-NAME = "HA-VeSync-BT"
+NAME = "VeSync Local BT"
 
 SUPPORTED_LOCAL_NAME = "COSORI Nutrition Scale"
 SUPPORTED_MODEL = "CNS-R002S-S"
