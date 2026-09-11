@@ -1,0 +1,113 @@
+name: Publish validated release
+
+on:
+  workflow_run:
+    workflows:
+      - Validate
+    types:
+      - completed
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out the validated commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Read release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = Path('custom_components/ha_vesync_bt/manifest.json')
+          print(json.loads(manifest.read_text(encoding='utf-8'))['version'])
+          PY
+          )"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if [[ "$VERSION" =~ (a|b|rc)[0-9]+$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check explicit release marker
+        id: marker
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f .github/release-ready ]] && [[ "$(tr -d '[:space:]' < .github/release-ready)" == "$VERSION" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Release marker is absent or does not match $VERSION; nothing will be published."
+          fi
+
+      - name: Verify release metadata
+        if: steps.marker.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          test -s RELEASE_NOTES.md
+          grep -Fq "$VERSION" RELEASE_NOTES.md
+          grep -Fq "## $VERSION" CHANGELOG.md
+
+      - name: Check whether the release already exists
+        if: steps.marker.outputs.ready == 'true'
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub release for HACS
+        if: >-
+          steps.marker.outputs.ready == 'true' &&
+          steps.existing.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            release create "$TAG"
+            --repo "$GITHUB_REPOSITORY"
+            --target "$HEAD_SHA"
+            --title "VeSync Local BT $TAG"
+            --notes-file RELEASE_NOTES.md
+          )
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+          gh "${args[@]}"
