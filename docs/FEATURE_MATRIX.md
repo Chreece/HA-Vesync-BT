@@ -32,6 +32,6 @@
 | History delete/ack | `0x444B` semantics known, but no real stored record was produced by the tested unit/firmware | **Disabled** |
 | OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal codec + updater + explicit VSV3 response-frame support; **not exposed** |
 | Official firmware availability | Static VeSync source proves CNS-R002S-S uses `MAC_ID` cloud update checks. On VeSync 5.9.60, two safe settings-screen UI snapshots showed the Firmware Update row but no `sm_v_red_warning`; that view is driven directly by `haveUpdate(scaleMac)` | **No official update currently offered for the tested device** |
-| Factory reset | Command known, destructive | **Disabled** |
+| Factory reset | Static end-to-end VeSync path proven: CNS-R002S-S inherits the R001 reset provider; connected-only UI confirmation calls `0xA087` with payload `01`, awaits the normal BLE request completion, dismisses on success, and reports failure if the scale is not connected. Scale-specific UI warns the reset is irreversible, clears stored user/history/configuration data, and the device restarts afterward | **Disabled** — destructive operation; no live reset performed |
 | Hold | CNS-R002S-S disables capability | Not exposed |
 | Region query | CNS-R002S-S disables capability | Not exposed |
