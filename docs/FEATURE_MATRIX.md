@@ -27,7 +27,7 @@
 | Quick Food reorder/delete semantics | Proven live | Implemented |
 | Quick Food nutrition | Proven exact roundtrip | Implemented |
 | Food context `0x4444` | Proven | Implemented action |
-| Selected food `0x4445` | Proven live for five physical Quick Foods, including UTF-8 `Hühnchenbrust`; captured vectors parse correctly | Implemented sensor/state; discrete selected-food changes publish immediately |
+| Selected food `0x4445` | Proven live for five physical Quick Foods, including UTF-8 `Hühnchenbrust`; captured vectors parse correctly. End-to-end HA runtime proof observed physical LEFT/RIGHT + SET transitions `unavailable -> Blaubeere -> Hühnchenbrust` as distinct Recorder states with the immediate-publication fix loaded | Implemented sensor/state; **live-proven end to end** |
 | Offline 200-record history | Advertised by manual; protocol/provider parser and sync path are known. Static callgraph proves R002 inherits the R001 implementation and the official lifecycle is `onPause -> save enabled (0x444C 00)`, `onResume/connected-active -> save suppressed (0x444C 01)`. A controlled official-VeSync offline selected-food measurement using that exact lifecycle still returned an empty `0x4446` page on first reconnect | **Disabled** — no record-producing behavior has been observed on the tested unit/firmware |
 | History delete/ack | `0x444B` semantics known, but no real stored record was produced by the tested unit/firmware | **Disabled** |
 | OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal codec + updater + explicit VSV3 response-frame support; **not exposed** |
