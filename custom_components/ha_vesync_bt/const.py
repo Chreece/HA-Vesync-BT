@@ -1,4 +1,4 @@
-"""Constants for VeSync Local BT."""
+"Constants for VeSync Local BT."
 
 from __future__ import annotations
 
@@ -28,6 +28,9 @@ ATTR_DAILY_FOOD_WEIGHT_G = "daily_food_weight_g"
 ATTR_CAMERA_ENTITY = "camera_entity"
 ATTR_AI_TASK_ENTITY = "ai_task_entity"
 ATTR_HINT = "hint"
+ATTR_IMAGE_DATA = "image_data"
+ATTR_IMAGE_MIME_TYPE = "image_mime_type"
+ATTR_IMAGE_SOURCE = "image_source"
 
 NUTRIENT_FIELDS = (
     "calories_kcal",
