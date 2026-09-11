@@ -1,7 +1,9 @@
-"""Service actions for VeSync Local BT."""
+"Service actions for VeSync Local BT."
 
 from __future__ import annotations
 
+import base64
+import binascii
 from typing import Any
 
 import voluptuous as vol
@@ -12,12 +14,15 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
-from .ai_scanner import async_recognize_food
+from .ai_scanner import async_recognize_food, async_recognize_image
 from .const import (
     ATTR_AI_TASK_ENTITY,
     ATTR_CAMERA_ENTITY,
     ATTR_DAILY_FOOD_WEIGHT_G,
     ATTR_HINT,
+    ATTR_IMAGE_DATA,
+    ATTR_IMAGE_MIME_TYPE,
+    ATTR_IMAGE_SOURCE,
     ATTR_NAME,
     ATTR_SEQUENCE,
     ATTR_SEQUENCES,
@@ -37,6 +42,9 @@ from .protocol.nutrition import Nutrition
 
 
 DEVICE_FIELD = {vol.Required(ATTR_DEVICE_ID): cv.string}
+_MAX_IMAGE_BASE64_CHARS = 4_000_000
+_MAX_IMAGE_BYTES = 3_000_000
+_IMAGE_MIME_TYPES = ("image/jpeg", "image/png", "image/webp")
 
 NUTRITION_SCHEMA = {
     vol.Optional(field, default=0.0): vol.Coerce(float)
@@ -93,21 +101,54 @@ SET_FOOD_CONTEXT_SCHEMA = vol.Schema(
     }
 )
 
-SCAN_FOOD_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_CAMERA_ENTITY): vol.All(
-            cv.entity_id,
-            vol.Match(r"^camera\."),
-        ),
-        vol.Optional(ATTR_AI_TASK_ENTITY): vol.All(
-            cv.entity_id,
-            vol.Match(r"^ai_task\."),
-        ),
-        vol.Optional(ATTR_HINT, default=""): vol.All(
-            cv.string,
-            vol.Length(max=500),
-        ),
-    }
+
+def _validate_scan_source(data: dict[str, Any]) -> dict[str, Any]:
+    """Require exactly one scan source: HA camera or browser image."""
+    has_camera = ATTR_CAMERA_ENTITY in data
+    has_image = ATTR_IMAGE_DATA in data
+    if has_camera == has_image:
+        raise vol.Invalid(
+            "Provide exactly one of camera_entity or image_data"
+        )
+    if has_image and ATTR_IMAGE_MIME_TYPE not in data:
+        raise vol.Invalid(
+            "image_mime_type is required when image_data is provided"
+        )
+    return data
+
+
+SCAN_FOOD_SCHEMA = vol.All(
+    vol.Schema(
+        {
+            vol.Optional(ATTR_CAMERA_ENTITY): vol.All(
+                cv.entity_id,
+                vol.Match(r"^camera\."),
+            ),
+            vol.Optional(ATTR_IMAGE_DATA): vol.All(
+                cv.string,
+                vol.Length(min=16, max=_MAX_IMAGE_BASE64_CHARS),
+            ),
+            vol.Optional(ATTR_IMAGE_MIME_TYPE): vol.In(_IMAGE_MIME_TYPES),
+            vol.Optional(
+                ATTR_IMAGE_SOURCE,
+                default="browser_camera",
+            ): vol.All(
+                cv.string,
+                vol.Length(min=1, max=64),
+                vol.Match(r"^[A-Za-z0-9_.-]+$"),
+            ),
+            vol.Optional(ATTR_AI_TASK_ENTITY): vol.All(
+                cv.entity_id,
+                vol.Match(r"^ai_task\."),
+            ),
+            vol.Optional(ATTR_HINT, default=""): vol.All(
+                cv.string,
+                vol.Length(max=500),
+            ),
+        },
+        extra=vol.PREVENT_EXTRA,
+    ),
+    _validate_scan_source,
 )
 
 
@@ -180,13 +221,37 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         )
 
     async def scan_food(call: ServiceCall) -> dict[str, Any]:
-        result = await async_recognize_food(
-            hass,
-            camera_entity=call.data[ATTR_CAMERA_ENTITY],
-            ai_task_entity=call.data.get(ATTR_AI_TASK_ENTITY),
-            hint=call.data.get(ATTR_HINT),
-            context=call.context,
-        )
+        if ATTR_IMAGE_DATA in call.data:
+            try:
+                image_data = base64.b64decode(
+                    call.data[ATTR_IMAGE_DATA],
+                    validate=True,
+                )
+            except (ValueError, binascii.Error) as err:
+                raise ServiceValidationError(
+                    "Browser image data is not valid base64"
+                ) from err
+            if len(image_data) > _MAX_IMAGE_BYTES:
+                raise ServiceValidationError(
+                    "Browser image is too large after decoding"
+                )
+            result = await async_recognize_image(
+                hass,
+                image_data=image_data,
+                mime_type=call.data[ATTR_IMAGE_MIME_TYPE],
+                source=call.data[ATTR_IMAGE_SOURCE],
+                ai_task_entity=call.data.get(ATTR_AI_TASK_ENTITY),
+                hint=call.data.get(ATTR_HINT),
+                context=call.context,
+            )
+        else:
+            result = await async_recognize_food(
+                hass,
+                camera_entity=call.data[ATTR_CAMERA_ENTITY],
+                ai_task_entity=call.data.get(ATTR_AI_TASK_ENTITY),
+                hint=call.data.get(ATTR_HINT),
+                context=call.context,
+            )
         return result.as_dict()
 
     hass.services.async_register(
