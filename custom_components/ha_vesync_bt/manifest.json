@@ -16,7 +16,8 @@
   ],
   "after_dependencies": [
     "ai_task",
-    "frontend"
+    "frontend",
+    "http"
   ],
   "documentation": "https://github.com/Chreece/HA-Vesync-BT",
   "integration_type": "device",
