@@ -159,6 +159,37 @@ FirmwareUpdateType.BT_ETEKCITY_V3
 
 This is distinct from the KMP V4 command family `0x8035..0x8038`.
 
+### Official firmware availability discovery
+
+VeSync does not infer update availability from the local `0xA08A` version alone.
+Static source tracing shows the CNS-R002S-S uses
+`CheckFirmwareUpdateType.MAC_ID` and VeSync's firmware manager performs a cloud
+upgrade check using the scale MAC address.
+
+The decompiled app contains the request path:
+
+```text
+POST /cloud/v2/deviceManaged/getFirmwareUpdateInfoList
+```
+
+The request model is `UpgradeCheckRequest`, with the R002S-S MAC placed in its
+`macIDList`. The returned `DeviceFirmware` data contains per-component firmware
+metadata, including the currently/latest offered version, download metadata,
+plugin/component identity, and upgrade level. `IFirmwareProvider.haveUpdate(mac)`
+is driven from the cached result; an upgrade level other than `LEVEL_0` makes the
+Nutrition Scale settings screen expose its red firmware-warning indicator.
+
+A non-destructive official-app check on VeSync 5.9.60 (versionCode 782) captured
+the actual `NutritionScaleSettingActivity` twice. The `Firmware Update` row was
+visible in both snapshots but `sm_v_red_warning` was absent in both. No firmware
+row was tapped, no OTA command was sent by the probe, and no firmware file was
+requested. This proves that the official app currently reports
+`haveUpdate(scaleMac) == false` for the tested device/account state.
+
+Accordingly, there is currently no VeSync-offered firmware package to use for a
+safe live OTA validation. The integration must not fabricate or substitute an
+unverified image.
+
 ### Initial request `0x8034`
 
 The logical command uses:
