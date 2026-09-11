@@ -1,6 +1,6 @@
 # Feature matrix
 
-| Capability | Evidence status | VeSync Local BT 0.2.0b1 / main |
+| Capability | Evidence status | VeSync Local BT 0.2.0b2 / main |
 | --- | --- | --- |
 | VSV3 connection | Proven live | Implemented |
 | AES session | Proven live | Implemented |
