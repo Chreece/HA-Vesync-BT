@@ -1,4 +1,4 @@
-"""Service actions for HA-VeSync-BT."""
+"""Service actions for VeSync Local BT."""
 
 from __future__ import annotations
 
@@ -113,7 +113,7 @@ def _coordinator_from_call(
             return entry.runtime_data
 
     raise ServiceValidationError(
-        "Selected device does not belong to HA-VeSync-BT"
+        "Selected device does not belong to VeSync Local BT"
     )
 
 
