@@ -1,4 +1,4 @@
-"""Register the VeSync Local BT dashboard card."""
+"Register the VeSync Local BT dashboard card."
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from .const import DOMAIN
 
 _FRONTEND_URL = "/vesync_local_bt"
 _DATA_KEY = f"{DOMAIN}_frontend_registered"
+_FRONTEND_REVISION = "0.2.0b2-r2"
 
 
 async def async_setup_frontend(hass: HomeAssistant) -> None:
@@ -29,10 +30,8 @@ async def async_setup_frontend(hass: HomeAssistant) -> None:
             )
         ]
     )
-    # Load through one ordered module so the translation table is guaranteed to
-    # exist before the custom card module evaluates.
     add_extra_js_url(
         hass,
-        f"{_FRONTEND_URL}/food-scanner-loader.js?v=0.2.0b2-r1",
+        f"{_FRONTEND_URL}/food-scanner-loader.js?v={_FRONTEND_REVISION}",
     )
     hass.data[_DATA_KEY] = True
