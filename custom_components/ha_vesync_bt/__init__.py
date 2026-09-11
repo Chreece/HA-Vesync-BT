@@ -1,4 +1,4 @@
-"""HA-VeSync-BT integration."""
+"""VeSync Local BT integration."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import HaVesyncCoordinator
+from .frontend_setup import async_setup_frontend
 from .services import async_setup_services
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -23,8 +24,9 @@ PLATFORMS = (
 
 
 async def async_setup(hass: HomeAssistant, _config: dict) -> bool:
-    """Set up integration-level actions."""
+    """Set up integration-level actions and dashboard resources."""
     await async_setup_services(hass)
+    await async_setup_frontend(hass)
     return True
 
 

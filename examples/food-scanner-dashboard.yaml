@@ -1,0 +1,7 @@
+title: VeSync Food Scanner
+views:
+  - title: Food Scanner
+    path: food-scanner
+    icon: mdi:food-apple-outline
+    cards:
+      - type: custom:vesync-local-bt-food-scanner

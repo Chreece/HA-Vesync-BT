@@ -7,13 +7,17 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant.const import ATTR_DEVICE_ID
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 
+from .ai_scanner import async_recognize_food
 from .const import (
+    ATTR_AI_TASK_ENTITY,
+    ATTR_CAMERA_ENTITY,
     ATTR_DAILY_FOOD_WEIGHT_G,
+    ATTR_HINT,
     ATTR_NAME,
     ATTR_SEQUENCE,
     ATTR_SEQUENCES,
@@ -23,6 +27,7 @@ from .const import (
     SERVICE_ADD_QUICK_FOOD,
     SERVICE_REMOVE_QUICK_FOOD,
     SERVICE_REORDER_QUICK_FOODS,
+    SERVICE_SCAN_FOOD,
     SERVICE_SET_ENABLED_UNITS,
     SERVICE_SET_FOOD_CONTEXT,
 )
@@ -88,6 +93,23 @@ SET_FOOD_CONTEXT_SCHEMA = vol.Schema(
     }
 )
 
+SCAN_FOOD_SCHEMA = vol.Schema(
+    {
+        vol.Required(ATTR_CAMERA_ENTITY): vol.All(
+            cv.entity_id,
+            vol.Match(r"^camera\."),
+        ),
+        vol.Optional(ATTR_AI_TASK_ENTITY): vol.All(
+            cv.entity_id,
+            vol.Match(r"^ai_task\."),
+        ),
+        vol.Optional(ATTR_HINT, default=""): vol.All(
+            cv.string,
+            vol.Length(max=500),
+        ),
+    }
+)
+
 
 def _nutrition(data: dict[str, Any]) -> Nutrition:
     return Nutrition(
@@ -109,7 +131,11 @@ def _coordinator_from_call(
 
     for entry_id in device.config_entries:
         entry = hass.config_entries.async_get_entry(entry_id)
-        if entry and entry.domain == DOMAIN and entry.runtime_data is not None:
+        if (
+            entry
+            and entry.domain == DOMAIN
+            and isinstance(entry.runtime_data, HaVesyncCoordinator)
+        ):
             return entry.runtime_data
 
     raise ServiceValidationError(
@@ -153,6 +179,16 @@ async def async_setup_services(hass: HomeAssistant) -> None:
             _nutrition(call.data),
         )
 
+    async def scan_food(call: ServiceCall) -> dict[str, Any]:
+        result = await async_recognize_food(
+            hass,
+            camera_entity=call.data[ATTR_CAMERA_ENTITY],
+            ai_task_entity=call.data.get(ATTR_AI_TASK_ENTITY),
+            hint=call.data.get(ATTR_HINT),
+            context=call.context,
+        )
+        return result.as_dict()
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_ADD_QUICK_FOOD,
@@ -182,4 +218,11 @@ async def async_setup_services(hass: HomeAssistant) -> None:
         SERVICE_SET_FOOD_CONTEXT,
         set_food_context,
         schema=SET_FOOD_CONTEXT_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SCAN_FOOD,
+        scan_food,
+        schema=SCAN_FOOD_SCHEMA,
+        supports_response=SupportsResponse.ONLY,
     )

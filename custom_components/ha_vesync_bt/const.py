@@ -18,12 +18,16 @@ SERVICE_REMOVE_QUICK_FOOD = "remove_quick_food"
 SERVICE_REORDER_QUICK_FOODS = "reorder_quick_foods"
 SERVICE_SET_ENABLED_UNITS = "set_enabled_units"
 SERVICE_SET_FOOD_CONTEXT = "set_food_context"
+SERVICE_SCAN_FOOD = "scan_food"
 
 ATTR_SEQUENCE = "sequence"
 ATTR_SEQUENCES = "sequences"
 ATTR_UNITS = "units"
 ATTR_NAME = "name"
 ATTR_DAILY_FOOD_WEIGHT_G = "daily_food_weight_g"
+ATTR_CAMERA_ENTITY = "camera_entity"
+ATTR_AI_TASK_ENTITY = "ai_task_entity"
+ATTR_HINT = "hint"
 
 NUTRIENT_FIELDS = (
     "calories_kcal",

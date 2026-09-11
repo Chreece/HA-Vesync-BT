@@ -73,6 +73,9 @@ integrations can coexist.
 - Live Quick Food cursor tracking from LEFT/RIGHT.
 - SET-confirmed Quick Food report (`0x4445`) and nutrition payload.
 - Full 11-field nutrition payload encoding/decoding.
+- Optional **AI Food Scanner dashboard** using a Home Assistant camera and an
+  image-capable AI Task, with explicit review before sending nutrition to the
+  scale.
 
 ### Deliberately not exposed yet
 
@@ -112,6 +115,26 @@ into:
 ```
 
 and restart Home Assistant.
+
+## AI Food Scanner dashboard
+
+The optional scanner card can take the current image from a Home Assistant
+`camera.*` entity, ask an image-capable Home Assistant AI Task to identify one
+food and return nutrition normalized to 100 g, then let you edit every value
+before explicitly sending it to the scale or saving it as a Quick Food.
+
+Add the card with:
+
+```yaml
+type: custom:vesync-local-bt-food-scanner
+```
+
+The integration does not persist the scan image or recognition result. A cloud
+AI Task provider may receive the camera image according to that provider's own
+privacy terms.
+
+See [`docs/FOOD_SCANNER.md`](docs/FOOD_SCANNER.md) for setup, privacy details,
+AI-provider requirements, and the full workflow.
 
 ## Entities
 
@@ -155,6 +178,7 @@ tare
 The integration provides device-level actions for the structured functions that
 do not fit standard Home Assistant entity models:
 
+- `ha_vesync_bt.scan_food` — response-only AI camera scan; does not write to the scale.
 - `ha_vesync_bt.add_quick_food`
 - `ha_vesync_bt.remove_quick_food`
 - `ha_vesync_bt.reorder_quick_foods`
@@ -184,6 +208,8 @@ Home Assistant
    ├── config flow / Bluetooth discovery
    │
    ├── coordinator + HA entities/actions
+   │
+   ├── optional AI Task food scanner + dashboard card
    │
    └── devices/
         └── CNS-R002S-S device implementation
@@ -218,6 +244,7 @@ See:
 
 - [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
 - [`docs/FEATURE_MATRIX.md`](docs/FEATURE_MATRIX.md)
+- [`docs/FOOD_SCANNER.md`](docs/FOOD_SCANNER.md)
 
 This project is unofficial and is not affiliated with VeSync or COSORI.
 

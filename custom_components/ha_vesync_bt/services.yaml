@@ -1,3 +1,27 @@
+scan_food:
+  name: Scan food with AI
+  description: Analyze a Home Assistant camera image with AI and return a reviewable nutrition profile normalized to 100 g. Nothing is sent to the scale automatically.
+  fields:
+    camera_entity:
+      name: Camera
+      description: Home Assistant camera entity whose current image should be analyzed.
+      required: true
+      selector:
+        entity:
+          domain: camera
+    ai_task_entity:
+      name: AI Task
+      description: Optional image-capable AI Task entity. Leave empty to use Home Assistant's preferred AI Task.
+      selector:
+        entity:
+          domain: ai_task
+    hint:
+      name: Hint
+      description: Optional short hint about the expected food or visible package/label.
+      selector:
+        text:
+          multiline: false
+
 add_quick_food:
   name: Add Quick Food
   description: Add one imported food to the physical scale.
@@ -26,80 +50,47 @@ add_quick_food:
     calories_kcal:
       name: Calories
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     protein_g:
       name: Protein
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     total_fat_g:
       name: Total fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     saturated_fat_g:
       name: Saturated fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     trans_fat_g:
       name: Trans fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     total_carbs_g:
       name: Total carbohydrates
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     dietary_fiber_g:
       name: Dietary fiber
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     sugars_g:
       name: Sugars
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     cholesterol_mg:
       name: Cholesterol
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     sodium_mg:
       name: Sodium
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     iron_mg:
       name: Iron
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
 
 remove_quick_food:
   name: Remove Quick Food
@@ -180,77 +171,44 @@ set_food_context:
     calories_kcal:
       name: Calories
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     protein_g:
       name: Protein
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     total_fat_g:
       name: Total fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     saturated_fat_g:
       name: Saturated fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     trans_fat_g:
       name: Trans fat
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     total_carbs_g:
       name: Total carbohydrates
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     dietary_fiber_g:
       name: Dietary fiber
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     sugars_g:
       name: Sugars
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     cholesterol_mg:
       name: Cholesterol
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     sodium_mg:
       name: Sodium
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
     iron_mg:
       name: Iron
       selector:
-        number:
-          min: 0
-          step: 0.1
-          mode: box
+        number: {min: 0, step: 0.1, mode: box}
