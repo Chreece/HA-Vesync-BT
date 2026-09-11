@@ -1,4 +1,4 @@
-# HA-VeSync-BT
+# VeSync Local BT
 
 💙 **Enjoying this hobby project? [Send a voluntary thank-you via Ko-fi](https://ko-fi.com/chreece).**
 
@@ -9,8 +9,9 @@ Local Home Assistant integration for VeSync BLE devices.
 > **Currently supported:** COSORI Smart Nutrition Scale **CNS-R002S-S**.
 
 The integration is intentionally separate from Home Assistant's built-in `vesync`
-integration. Its Home Assistant domain is `ha_vesync_bt`, so both integrations can
-coexist.
+integration. Its Home Assistant domain remains `ha_vesync_bt`, so existing
+config entries, entities, services, and automations remain compatible and both
+integrations can coexist.
 
 ## Goals
 
@@ -69,7 +70,8 @@ coexist.
 - Firmware query.
 - Quick Food query/add/remove/reorder.
 - Current food-context command (`0x4444`).
-- Quick Food selection report (`0x4445`) and nutrition payload.
+- Live Quick Food cursor tracking from LEFT/RIGHT.
+- SET-confirmed Quick Food report (`0x4445`) and nutrition payload.
 - Full 11-field nutrition payload encoding/decoding.
 
 ### Deliberately not exposed yet
@@ -89,10 +91,10 @@ These are kept out of the public HA surface until their behavior is fully proven
 ### HACS custom repository
 
 1. Add this repository to HACS as a **Custom repository** of type **Integration**.
-2. Install **HA-VeSync-BT**.
+2. Install **VeSync Local BT**.
 3. Restart Home Assistant.
 4. Wake the CNS-R002S-S.
-5. Go to **Settings → Devices & services → Add integration → HA-VeSync-BT**.
+5. Go to **Settings → Devices & services → Add integration → VeSync Local BT**.
 6. Select the discovered `COSORI Nutrition Scale`.
 
 ### Manual
