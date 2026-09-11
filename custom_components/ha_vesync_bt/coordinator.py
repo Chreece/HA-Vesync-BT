@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import replace
 import logging
 from time import monotonic
 
@@ -20,6 +21,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import STATE_THROTTLE_SECONDS, SUPPORTED_LOCAL_NAME
 from .devices.cns_r002s_s import CnsR002sDevice
+from .food_cursor import advance_quick_food_cursor
 from .protocol.exceptions import VeSyncConnectionError
 from .protocol.models import DeviceButtonEvent, ScaleState
 from .protocol.nutrition import Nutrition
@@ -55,6 +57,7 @@ class HaVesyncCoordinator(DataUpdateCoordinator[ScaleState]):
         self._connect_lock = asyncio.Lock()
         self._event_listeners: set[Callable[[DeviceButtonEvent], None]] = set()
         self._last_publish = 0.0
+        self._food_cursor_index: int | None = None
 
     async def async_start(self) -> None:
         """Start discovery/reconnect handling."""
@@ -223,7 +226,32 @@ class HaVesyncCoordinator(DataUpdateCoordinator[ScaleState]):
     @callback
     def _handle_device_state(self, state: ScaleState) -> None:
         now = monotonic()
-        selected_food_changed = state.selected_food != self.data.selected_food
+        previous = self.data
+
+        if not state.connected:
+            self._food_cursor_index = None
+            if state.selected_food is not None:
+                state = replace(state, selected_food=None)
+                self.device.state = state
+
+        quick_foods_changed = state.quick_foods != previous.quick_foods
+
+        if state.selected_food is not None and (
+            quick_foods_changed or state.selected_food != previous.selected_food
+        ):
+            matched = self._match_quick_food_index(state)
+            if matched is not None:
+                self._food_cursor_index = matched
+                canonical = state.quick_foods[matched]
+                if state.selected_food != canonical:
+                    state = replace(state, selected_food=canonical)
+                    self.device.state = state
+            elif quick_foods_changed:
+                self._food_cursor_index = None
+                state = replace(state, selected_food=None)
+                self.device.state = state
+
+        selected_food_changed = state.selected_food != previous.selected_food
         self.data = state
         if (
             selected_food_changed
@@ -235,5 +263,41 @@ class HaVesyncCoordinator(DataUpdateCoordinator[ScaleState]):
 
     @callback
     def _handle_device_event(self, event: DeviceButtonEvent) -> None:
+        if event.button in {"left", "right"}:
+            self._advance_food_cursor(event.button)
+
         for listener in tuple(self._event_listeners):
             listener(event)
+
+    def _advance_food_cursor(self, direction: str) -> None:
+        foods = self.device.state.quick_foods
+        next_index = advance_quick_food_cursor(
+            self._food_cursor_index,
+            len(foods),
+            direction,
+        )
+        self._food_cursor_index = next_index
+        selected_food = foods[next_index] if next_index is not None else None
+
+        state = replace(self.device.state, selected_food=selected_food)
+        self.device.state = state
+        self.data = state
+        self._last_publish = monotonic()
+        self.async_set_updated_data(state)
+
+    @staticmethod
+    def _match_quick_food_index(state: ScaleState) -> int | None:
+        selected = state.selected_food
+        if selected is None:
+            return None
+
+        matches = [
+            index
+            for index, food in enumerate(state.quick_foods)
+            if (
+                food.name == selected.name
+                and food.daily_food_weight_g == selected.daily_food_weight_g
+                and food.nutrition == selected.nutrition
+            )
+        ]
+        return matches[0] if len(matches) == 1 else None
