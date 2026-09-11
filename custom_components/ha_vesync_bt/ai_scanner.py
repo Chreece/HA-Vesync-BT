@@ -1,11 +1,26 @@
-"""Home Assistant AI Task bridge for food recognition."""
+"Home Assistant AI Task bridge for food recognition."
 
 from __future__ import annotations
 
+from pathlib import Path
+import tempfile
 from typing import Any
 
+import voluptuous as vol
+
+from homeassistant.components import ai_task, conversation
+from homeassistant.components.ai_task.const import (
+    DATA_COMPONENT,
+    DATA_PREFERENCES,
+    AITaskEntityFeature,
+)
 from homeassistant.core import Context, HomeAssistant
-from homeassistant.exceptions import HomeAssistantError, ServiceNotFound, ServiceValidationError
+from homeassistant.exceptions import (
+    HomeAssistantError,
+    ServiceNotFound,
+    ServiceValidationError,
+)
+from homeassistant.helpers.chat_session import async_get_chat_session
 
 from .food_scan import FoodScanResult, parse_food_scan_data
 from .protocol.nutrition import NUTRIENT_NAMES
@@ -27,9 +42,15 @@ _NUTRIENT_DESCRIPTIONS = {
     "iron_mg": "Iron in milligrams per 100 g.",
 }
 
+_IMAGE_MIME_SUFFIX = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+}
+
 
 def _structure() -> dict[str, Any]:
-    """Return the strict structured-output schema for AI Task."""
+    """Return the selector-based structured-output schema for AI Task service calls."""
     result: dict[str, Any] = {
         "identified": {
             "description": (
@@ -89,10 +110,53 @@ def _structure() -> dict[str, Any]:
     return result
 
 
+def _vol_structure() -> vol.Schema:
+    """Return an equivalent Voluptuous schema for direct AI Task entity calls."""
+    fields: dict[Any, Any] = {
+        vol.Required(
+            "identified",
+            description=(
+                "Return yes only when one edible food or packaged food can be "
+                "identified with useful confidence."
+            ),
+        ): vol.In(["yes", "no"]),
+        vol.Required(
+            "name",
+            description="Concise food/product name, maximum 20 characters.",
+        ): str,
+        vol.Required(
+            "confidence",
+            description="Recognition confidence from 0 to 100.",
+        ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
+        vol.Required(
+            "basis",
+            description=(
+                "One of nutrition_label, known_food, visual_estimate, unknown."
+            ),
+        ): vol.In(
+            [
+                "nutrition_label",
+                "known_food",
+                "visual_estimate",
+                "unknown",
+            ]
+        ),
+        vol.Required(
+            "warning",
+            description="Short uncertainty or conversion warning, or empty string.",
+        ): str,
+    }
+    for field in NUTRIENT_NAMES:
+        fields[
+            vol.Required(field, description=_NUTRIENT_DESCRIPTIONS[field])
+        ] = vol.All(vol.Coerce(float), vol.Range(min=0))
+    return vol.Schema(fields, extra=vol.PREVENT_EXTRA)
+
+
 def _instructions(language: str, hint: str | None) -> str:
     """Build evidence-conscious food-recognition instructions."""
     hint_text = f"\nUser hint: {hint.strip()}" if hint and hint.strip() else ""
-    return f"""Analyze the attached camera image for VeSync Local BT.
+    return f"""Analyze the attached image for VeSync Local BT.
 
 Identify ONE dominant edible food or packaged food that the user is likely
 placing on a nutrition scale. Return the food name in Home Assistant language
@@ -183,4 +247,104 @@ async def async_recognize_food(
         response["data"],
         camera_entity=camera_entity,
         ai_task_entity=ai_task_entity,
+    )
+
+
+def _write_temp_image(image_data: bytes, suffix: str) -> Path:
+    """Write one browser-captured image to an ephemeral temp file."""
+    with tempfile.NamedTemporaryFile(
+        mode="wb",
+        suffix=suffix,
+        delete=False,
+    ) as temp_file:
+        temp_file.write(image_data)
+        return Path(temp_file.name)
+
+
+async def async_recognize_image(
+    hass: HomeAssistant,
+    *,
+    image_data: bytes,
+    mime_type: str,
+    source: str,
+    ai_task_entity: str | None = None,
+    hint: str | None = None,
+    context: Context | None = None,
+) -> FoodScanResult:
+    """Run one multimodal AI Task against browser/mobile image bytes."""
+    suffix = _IMAGE_MIME_SUFFIX.get(mime_type)
+    if suffix is None:
+        raise ServiceValidationError(
+            f"Unsupported browser image type: {mime_type}"
+        )
+
+    preferences = hass.data.get(DATA_PREFERENCES)
+    entity_id = ai_task_entity or (
+        preferences.gen_data_entity_id if preferences is not None else None
+    )
+    if entity_id is None:
+        raise ServiceValidationError(
+            "No AI Task entity was selected and Home Assistant has no preferred "
+            "Generate data AI Task."
+        )
+    if not entity_id.startswith("ai_task."):
+        raise ServiceValidationError(
+            f"AI Task entity {entity_id!r} is not valid"
+        )
+
+    component = hass.data.get(DATA_COMPONENT)
+    entity = component.get_entity(entity_id) if component is not None else None
+    if entity is None:
+        raise ServiceValidationError(
+            f"AI Task entity {entity_id!r} was not found"
+        )
+    if AITaskEntityFeature.GENERATE_DATA not in entity.supported_features:
+        raise ServiceValidationError(
+            f"AI Task entity {entity_id!r} does not support Generate data"
+        )
+    if AITaskEntityFeature.SUPPORT_ATTACHMENTS not in entity.supported_features:
+        raise ServiceValidationError(
+            f"AI Task entity {entity_id!r} does not support image attachments"
+        )
+
+    temp_path = await hass.async_add_executor_job(
+        _write_temp_image,
+        image_data,
+        suffix,
+    )
+    try:
+        attachment = conversation.Attachment(
+            media_content_id=f"media-source://ha_vesync_bt/{source}",
+            mime_type=mime_type,
+            path=temp_path,
+        )
+        with async_get_chat_session(hass) as session:
+            result = await entity.internal_async_generate_data(
+                session,
+                ai_task.GenDataTask(
+                    name="VeSync Local BT food scanner",
+                    instructions=_instructions(hass.config.language, hint),
+                    structure=_vol_structure(),
+                    attachments=[attachment],
+                ),
+                context,
+            )
+    except HomeAssistantError as err:
+        raise ServiceValidationError(
+            f"AI food recognition failed: {err}"
+        ) from err
+    finally:
+        await hass.async_add_executor_job(
+            lambda: temp_path.unlink(missing_ok=True)
+        )
+
+    if not isinstance(result.data, dict):
+        raise ServiceValidationError(
+            "AI Task returned no structured food-recognition data"
+        )
+
+    return parse_food_scan_data(
+        result.data,
+        camera_entity=source,
+        ai_task_entity=entity_id,
     )
