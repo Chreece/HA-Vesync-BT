@@ -3,6 +3,7 @@
   "name": "VeSync Local BT",
   "after_dependencies": [
     "ai_task",
+    "conversation",
     "frontend",
     "http"
   ],
