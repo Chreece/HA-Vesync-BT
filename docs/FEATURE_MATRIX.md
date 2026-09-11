@@ -31,6 +31,7 @@
 | Offline 200-record history | Advertised by manual; protocol/provider parser and sync path are known. Static callgraph proves R002 inherits the R001 implementation and the official lifecycle is `onPause -> save enabled (0x444C 00)`, `onResume/connected-active -> save suppressed (0x444C 01)`. A controlled official-VeSync offline selected-food measurement using that exact lifecycle still returned an empty `0x4446` page on first reconnect | **Disabled** — no record-producing behavior has been observed on the tested unit/firmware |
 | History delete/ack | `0x444B` semantics known, but no real stored record was produced by the tested unit/firmware | **Disabled** |
 | OTA `BT_ETEKCITY_V3` wire protocol | Static provider/state-machine/codec mapping proven; actual firmware write has not been live-validated | Internal codec + updater + explicit VSV3 response-frame support; **not exposed** |
+| Official firmware availability | Static VeSync source proves CNS-R002S-S uses `MAC_ID` cloud update checks. On VeSync 5.9.60, two safe settings-screen UI snapshots showed the Firmware Update row but no `sm_v_red_warning`; that view is driven directly by `haveUpdate(scaleMac)` | **No official update currently offered for the tested device** |
 | Factory reset | Command known, destructive | **Disabled** |
 | Hold | CNS-R002S-S disables capability | Not exposed |
 | Region query | CNS-R002S-S disables capability | Not exposed |
