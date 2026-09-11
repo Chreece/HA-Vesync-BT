@@ -1,6 +1,6 @@
 {
   "domain": "ha_vesync_bt",
-  "name": "HA-VeSync-BT",
+  "name": "VeSync Local BT",
   "bluetooth": [
     {
       "connectable": true,
