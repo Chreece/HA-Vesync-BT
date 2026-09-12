@@ -69,7 +69,11 @@ def _structure(language: str) -> dict[str, Any]:
             "selector": {"text": {}},
         },
         "confidence": {
-            "description": "Recognition confidence from 0 to 100.",
+            "description": (
+                "Recognition confidence as an INTEGER PERCENT from 0 to 100. "
+                "Use 95 to mean 95 percent. Never return 0.95 for 95 percent, "
+                "and never use 1 to mean 100 percent."
+            ),
             "required": True,
             "selector": {"number": {"min": 0, "max": 100, "step": 1}},
         },
@@ -130,7 +134,10 @@ def _vol_structure(language: str) -> vol.Schema:
         ): str,
         vol.Required(
             "confidence",
-            description="Recognition confidence from 0 to 100.",
+            description=(
+                "Recognition confidence as a 0 to 100 percentage. Use 95 for "
+                "95 percent, not 0.95. Use 100 for full confidence, not 1."
+            ),
         ): vol.All(vol.Coerce(float), vol.Range(min=0, max=100)),
         vol.Required(
             "basis",
@@ -176,6 +183,13 @@ Language contract:
   code {language!r}. If no warning is needed, return an empty string.
 - Machine fields such as `basis` keep their fixed schema values and are not
   translated.
+
+Confidence contract:
+- `confidence` MUST be a percentage on the 0..100 scale, NOT a probability on
+  the 0..1 scale.
+- Return 95 for 95 percent confidence, 100 for full confidence, and 1 only when
+  confidence is genuinely one percent.
+- NEVER return 0.95 to mean 95 percent and NEVER return 1 to mean 100 percent.
 
 Nutrition values MUST be normalized to a 100 g reference because the scale
 expects food nutrition per 100 g.
