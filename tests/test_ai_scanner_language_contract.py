@@ -1,4 +1,4 @@
-"""Regression tests for AI food-scanner language semantics."""
+"""Regression tests for AI food-scanner language and confidence semantics."""
 
 from pathlib import Path
 
@@ -29,3 +29,13 @@ def test_machine_basis_values_are_not_localized() -> None:
     assert "Machine fields such as `basis` keep their fixed schema values" in AI_SCANNER
     for value in ("nutrition_label", "known_food", "visual_estimate", "unknown"):
         assert value in AI_SCANNER
+
+
+def test_confidence_is_requested_as_percent_not_probability() -> None:
+    """Providers get an explicit 0..100 contract instead of an ambiguous number."""
+    assert "Confidence contract:" in AI_SCANNER
+    assert "MUST be a percentage on the 0..100 scale" in AI_SCANNER
+    assert "NOT a probability on" in AI_SCANNER
+    assert "Return 95 for 95 percent confidence" in AI_SCANNER
+    assert "NEVER return 0.95 to mean 95 percent" in AI_SCANNER
+    assert "never use 1 to mean 100 percent" in AI_SCANNER
