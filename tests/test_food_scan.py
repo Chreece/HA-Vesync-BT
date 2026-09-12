@@ -64,6 +64,79 @@ def test_parse_food_scan_normalizes_values() -> None:
     assert result.as_dict()["reference_weight_g"] == 100.0
 
 
+def test_fractional_confidence_is_normalized_for_identified_food() -> None:
+    """Providers returning 0..1 probability values are converted to percent."""
+    result = scan.parse_food_scan_data(
+        {
+            "identified": "yes",
+            "name": "Red onion",
+            "confidence": 0.87,
+            "basis": "known_food",
+            "warning": "",
+        },
+        camera_entity="browser_camera",
+        ai_task_entity="ai_task.vision",
+        scanned_at="2026-09-12T08:00:00+00:00",
+    )
+
+    assert result.confidence == 87.0
+
+
+def test_fractional_one_is_full_percent_for_identified_food() -> None:
+    """Observed provider output 1 is treated as probability 1.0, not one percent."""
+    result = scan.parse_food_scan_data(
+        {
+            "identified": "yes",
+            "name": "Red onion",
+            "confidence": 1,
+            "basis": "known_food",
+            "warning": "",
+        },
+        camera_entity="browser_camera",
+        ai_task_entity="ai_task.vision",
+        scanned_at="2026-09-12T08:00:00+00:00",
+    )
+
+    assert result.confidence == 100.0
+
+
+def test_percentage_confidence_is_not_rescaled() -> None:
+    """Normal 0..100 provider output remains unchanged."""
+    result = scan.parse_food_scan_data(
+        {
+            "identified": "yes",
+            "name": "Banana",
+            "confidence": 92,
+            "basis": "known_food",
+            "warning": "",
+        },
+        camera_entity="browser_camera",
+        ai_task_entity="ai_task.vision",
+        scanned_at="2026-09-12T08:00:00+00:00",
+    )
+
+    assert result.confidence == 92.0
+
+
+def test_unidentified_one_percent_is_not_promoted() -> None:
+    """A negative identification never gains confidence through compatibility handling."""
+    result = scan.parse_food_scan_data(
+        {
+            "identified": "no",
+            "name": "Unknown",
+            "confidence": 1,
+            "basis": "unknown",
+            "warning": "Cannot identify the object",
+        },
+        camera_entity="browser_camera",
+        ai_task_entity="ai_task.vision",
+        scanned_at="2026-09-12T08:00:00+00:00",
+    )
+
+    assert result.identified is False
+    assert result.confidence == 1.0
+
+
 def test_parse_food_scan_unknown_is_safe() -> None:
     """Missing or invalid AI fields stay reviewable and are never negative."""
     result = scan.parse_food_scan_data(
