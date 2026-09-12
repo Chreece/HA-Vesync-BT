@@ -12,7 +12,7 @@ from .const import DOMAIN
 
 _FRONTEND_URL = "/vesync_local_bt"
 _DATA_KEY = f"{DOMAIN}_frontend_registered"
-_FRONTEND_REVISION = "0.2.0b2-r4"
+_FRONTEND_REVISION = "0.2.0b2-r5"
 
 
 async def async_setup_frontend(hass: HomeAssistant) -> None:
