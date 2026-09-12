@@ -19,6 +19,16 @@ The flow is deliberately two-stage:
 
 The dashboard never automatically sends an AI result to the physical scale.
 
+The scanner has an explicit language contract:
+
+- the recognized **food name is always English**, independent of the Home
+  Assistant/dashboard language, so the scale receives one stable canonical food
+  name;
+- user-facing **warning/description text follows the Home Assistant UI
+  language**;
+- machine values such as `basis` remain fixed protocol/schema values and are not
+  translated.
+
 The evidence badge distinguishes:
 
 - `nutrition_label` — values came from a readable label in the image.
@@ -119,8 +129,8 @@ A complete example dashboard is in
 6. For the browser/device source, either use live capture on HTTPS or choose
    **Take / select photo** on any supported mobile browser/WebView.
 7. Select **Scan food**.
-8. Review the name, evidence basis, confidence, warning, and every nutrition
-   value.
+8. Review the English food name, localized warning, evidence basis, confidence,
+   and every nutrition value.
 9. Correct any value that is wrong.
 10. Choose:
    - **Send to scale** — sends the reviewed profile through the proven `0x4444`
