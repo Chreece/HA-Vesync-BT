@@ -49,7 +49,7 @@ _IMAGE_MIME_SUFFIX = {
 }
 
 
-def _structure() -> dict[str, Any]:
+def _structure(language: str) -> dict[str, Any]:
     """Return the selector-based structured-output schema for AI Task service calls."""
     result: dict[str, Any] = {
         "identified": {
@@ -62,8 +62,8 @@ def _structure() -> dict[str, Any]:
         },
         "name": {
             "description": (
-                "Concise food/product name, maximum 20 characters. Use the "
-                "requested UI language when practical."
+                "Concise ENGLISH food/product name, maximum 20 characters. "
+                "Always use English regardless of the Home Assistant UI language."
             ),
             "required": True,
             "selector": {"text": {}},
@@ -94,8 +94,9 @@ def _structure() -> dict[str, Any]:
         },
         "warning": {
             "description": (
-                "Short warning about uncertainty, missing label fields, conversion, "
-                "or ambiguity. Return an empty string when there is no special warning."
+                "Short user-facing warning about uncertainty, missing label fields, "
+                "conversion, or ambiguity. Write it in Home Assistant UI language "
+                f"code {language!r}. Return an empty string when there is no special warning."
             ),
             "required": True,
             "selector": {"text": {}},
@@ -110,7 +111,7 @@ def _structure() -> dict[str, Any]:
     return result
 
 
-def _vol_structure() -> vol.Schema:
+def _vol_structure(language: str) -> vol.Schema:
     """Return an equivalent Voluptuous schema for direct AI Task entity calls."""
     fields: dict[Any, Any] = {
         vol.Required(
@@ -122,7 +123,10 @@ def _vol_structure() -> vol.Schema:
         ): vol.In(["yes", "no"]),
         vol.Required(
             "name",
-            description="Concise food/product name, maximum 20 characters.",
+            description=(
+                "Concise ENGLISH food/product name, maximum 20 characters. "
+                "Never localize this field."
+            ),
         ): str,
         vol.Required(
             "confidence",
@@ -143,7 +147,10 @@ def _vol_structure() -> vol.Schema:
         ),
         vol.Required(
             "warning",
-            description="Short uncertainty or conversion warning, or empty string.",
+            description=(
+                "Short user-facing uncertainty or conversion warning written in "
+                f"Home Assistant UI language code {language!r}, or empty string."
+            ),
         ): str,
     }
     for field in NUTRIENT_NAMES:
@@ -159,8 +166,16 @@ def _instructions(language: str, hint: str | None) -> str:
     return f"""Analyze the attached image for VeSync Local BT.
 
 Identify ONE dominant edible food or packaged food that the user is likely
-placing on a nutrition scale. Return the food name in Home Assistant language
-code {language!r} when practical.
+placing on a nutrition scale.
+
+Language contract:
+- The `name` field MUST ALWAYS be an ENGLISH food/product name, maximum 20
+  characters, regardless of the Home Assistant UI language or the language of
+  the user hint. Do not translate the food name.
+- The user-facing `warning` field MUST be written in Home Assistant UI language
+  code {language!r}. If no warning is needed, return an empty string.
+- Machine fields such as `basis` keep their fixed schema values and are not
+  translated.
 
 Nutrition values MUST be normalized to a 100 g reference because the scale
 expects food nutrition per 100 g.
@@ -205,7 +220,7 @@ async def async_recognize_food(
     service_data: dict[str, Any] = {
         "task_name": "VeSync Local BT food scanner",
         "instructions": _instructions(hass.config.language, hint),
-        "structure": _structure(),
+        "structure": _structure(hass.config.language),
         "attachments": [
             {
                 "media_content_id": f"media-source://camera/{camera_entity}",
@@ -324,7 +339,7 @@ async def async_recognize_image(
                 ai_task.GenDataTask(
                     name="VeSync Local BT food scanner",
                     instructions=_instructions(hass.config.language, hint),
-                    structure=_vol_structure(),
+                    structure=_vol_structure(hass.config.language),
                     attachments=[attachment],
                 ),
                 context,
