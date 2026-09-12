@@ -76,10 +76,14 @@ The card offers two local-device capture paths:
   expose this only in a secure context, so normal HTTPS Home Assistant URLs can
   use the live preview/capture buttons. A plain-LAN URL such as
   `http://192.168.x.x:8123` cannot use live `getUserMedia()` by browser design.
-- **Take / select photo** uses the native `input type="file"` image-capture path.
-  It remains available on plain HTTP and is intended to work in normal mobile
-  browsers and Home Assistant Companion WebViews even when live camera capture
-  is unavailable.
+- **Take / select photo** uses the native `input type="file"` image path. It
+  remains available on plain HTTP and opens the platform file/photo picker.
+  Normal mobile browsers may offer the camera from that picker. **Home Assistant
+  Companion for Android currently does not honor the HTML `capture` hint and
+  offers existing photos/files only**; this is tracked upstream as
+  `home-assistant/android#6055`. Direct camera capture inside Companion therefore
+  requires the HTTPS live-camera path until the Android app adds capture-intent
+  support.
 
 The scanner deliberately avoids rebuilding its DOM while a native select menu,
 camera permission prompt, or Android/file chooser is active. Unrelated Home
@@ -126,8 +130,9 @@ A complete example dashboard is in
 3. Choose either a Home Assistant camera or **Browser / device camera**.
 4. Choose an image-capable AI Task, or use the preferred AI Task.
 5. Optionally add a short hint such as `banana` or `nutrition label`.
-6. For the browser/device source, either use live capture on HTTPS or choose
-   **Take / select photo** on any supported mobile browser/WebView.
+6. For the browser/device source, use live capture on HTTPS or **Take / select
+   photo**. On Android Companion over plain HTTP, the latter currently selects
+   an existing photo/file rather than launching the camera.
 7. Select **Scan food**.
 8. Review the English food name, localized warning, evidence basis, confidence,
    and every nutrition value.
