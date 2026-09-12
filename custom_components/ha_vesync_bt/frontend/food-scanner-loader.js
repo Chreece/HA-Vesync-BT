@@ -1,6 +1,6 @@
 (async () => {
   try {
-    const revision = "0.2.0b2-r3";
+    const revision = "0.2.0b2-r4";
     await import(`./food-scanner-i18n.js?v=${revision}`);
     await import(`./food-scanner-card-v2.js?v=${revision}`);
   } catch (error) {
