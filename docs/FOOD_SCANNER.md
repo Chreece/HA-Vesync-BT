@@ -1,9 +1,10 @@
 # AI Food Scanner dashboard
 
-VeSync Local BT includes an optional dashboard card that can analyze the current
-image from a Home Assistant camera, ask a Home Assistant AI Task provider to
-identify one food, return a structured nutrition profile normalized to **100 g**,
-and let the user review or edit every value before anything is sent to the scale.
+VeSync Local BT includes an optional dashboard card that can analyze either the
+current image from a Home Assistant camera or a photo captured/selected on the
+browser device, ask a Home Assistant AI Task provider to identify one food,
+return a structured nutrition profile normalized to **100 g**, and let the user
+review or edit every value before anything is sent to the scale.
 
 ## Safety model
 
@@ -35,26 +36,45 @@ VeSync Local BT does **not** store the camera image or AI result in integration
 storage, Home Assistant entities, or Recorder. The `scan_food` action is
 response-only and the dashboard keeps the current draft only in browser memory.
 
-The selected camera image is passed through Home Assistant's AI Task framework.
-If the chosen AI Task provider is cloud-based, the provider can receive the
-image according to that provider's own privacy terms. Provider credentials stay
-with the provider integration; VeSync Local BT does not store or handle them.
+The selected image is passed through Home Assistant's AI Task framework. If the
+chosen AI Task provider is cloud-based, the provider can receive the image
+according to that provider's own privacy terms. Provider credentials stay with
+the provider integration; VeSync Local BT does not store or handle them.
 
-The card remembers only the selected scale, camera, AI Task entity, and optional
-hint in browser `localStorage`. It does not persist recognized food or nutrition
-values.
+The card remembers only the selected scale, camera source, AI Task entity, and
+optional hint in browser `localStorage`. It does not persist recognized food or
+nutrition values.
 
 ## Requirements
 
 - Home Assistant 2026.9 or newer.
 - VeSync Local BT loaded with a supported scale.
-- At least one `camera.*` entity.
+- Either a Home Assistant `camera.*` entity or browser/mobile photo capture.
 - An AI Task entity that supports both **Generate data** and **attachments**.
   You can select one in the card, or leave the field blank to use Home
   Assistant's preferred AI Task for Generate data.
 
 Home Assistant resolves `media-source://camera/<entity_id>` attachments into a
-camera snapshot before invoking the AI provider.
+camera snapshot before invoking the AI provider. Browser/mobile captures are
+sent as an in-memory image attachment and are not persisted by VeSync Local BT.
+
+### Browser and mobile camera behavior
+
+The card offers two local-device capture paths:
+
+- **Live browser camera** uses `navigator.mediaDevices.getUserMedia()`. Browsers
+  expose this only in a secure context, so normal HTTPS Home Assistant URLs can
+  use the live preview/capture buttons. A plain-LAN URL such as
+  `http://192.168.x.x:8123` cannot use live `getUserMedia()` by browser design.
+- **Take / select photo** uses the native `input type="file"` image-capture path.
+  It remains available on plain HTTP and is intended to work in normal mobile
+  browsers and Home Assistant Companion WebViews even when live camera capture
+  is unavailable.
+
+The scanner deliberately avoids rebuilding its DOM while a native select menu,
+camera permission prompt, or Android/file chooser is active. Unrelated Home
+Assistant state churn therefore cannot close a selector or destroy the pending
+photo input while the user is interacting with it.
 
 ### OpenAI provider note
 
@@ -93,14 +113,16 @@ A complete example dashboard is in
 
 1. Wake the scale if you plan to send the result immediately.
 2. Choose the target scale.
-3. Choose the camera showing the food or package.
+3. Choose either a Home Assistant camera or **Browser / device camera**.
 4. Choose an image-capable AI Task, or use the preferred AI Task.
 5. Optionally add a short hint such as `banana` or `nutrition label`.
-6. Select **Scan food**.
-7. Review the name, evidence basis, confidence, warning, and every nutrition
+6. For the browser/device source, either use live capture on HTTPS or choose
+   **Take / select photo** on any supported mobile browser/WebView.
+7. Select **Scan food**.
+8. Review the name, evidence basis, confidence, warning, and every nutrition
    value.
-8. Correct any value that is wrong.
-9. Choose:
+9. Correct any value that is wrong.
+10. Choose:
    - **Send to scale** — sends the reviewed profile through the proven `0x4444`
      food-context path. It does not add a Quick Food.
    - **Save as Quick Food** — writes the reviewed profile as a 100 g Quick Food
@@ -137,10 +159,3 @@ protein_g: 1.1
 ```
 
 No scale write occurs during `scan_food`.
-
-## Current limitation
-
-The first implementation scans an existing Home Assistant `camera.*` entity.
-Direct browser/phone `getUserMedia()` capture is intentionally a later layer so
-we can prove the HA camera → AI Task → review → scale path first without adding
-a separate image-upload API.
