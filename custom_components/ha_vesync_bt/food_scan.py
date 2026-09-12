@@ -27,6 +27,23 @@ def _number(value: Any) -> float:
     return max(0.0, result)
 
 
+def _confidence_percent(value: Any, *, identified: bool) -> float:
+    """Normalize provider confidence into the scanner's 0..100 percent contract.
+
+    Some multimodal providers return probability-style confidence in the 0..1
+    interval even when the structured-output field explicitly requests 0..100.
+    We have observed that behavior on clearly identified foods.  For an
+    affirmative identification, interpret a positive value at or below 1 as a
+    fractional probability and convert it to percent.  Values already above 1
+    remain percentage values, and an unidentified result is never promoted by
+    this compatibility normalization.
+    """
+    result = _number(value)
+    if identified and 0.0 < result <= 1.0:
+        result *= 100.0
+    return min(100.0, result)
+
+
 @dataclass(frozen=True, slots=True)
 class FoodScanResult:
     """One AI food-recognition result normalized for the scale."""
@@ -74,7 +91,10 @@ def parse_food_scan_data(
         name = "Unknown"
         identified = False
 
-    confidence = min(100.0, _number(data.get("confidence", 0.0)))
+    confidence = _confidence_percent(
+        data.get("confidence", 0.0),
+        identified=identified,
+    )
 
     basis = str(data.get("basis") or "unknown").strip().lower()
     if basis not in SCAN_BASES:
