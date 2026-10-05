@@ -7,9 +7,6 @@
 
 # VeSync Local BT
 
-💙 **Enjoying this hobby project? [Send a voluntary thank-you via Ko-fi](https://ko-fi.com/chreece).**
-
-
 Local Home Assistant integration for VeSync BLE devices.
 
 > **Status:** experimental / reverse-engineering based.  
